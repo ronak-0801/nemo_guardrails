@@ -1,0 +1,55 @@
+define user express greeting
+  "hi"
+  "hello"
+  "hey"
+  "good morning"
+  "good afternoon"
+  "good evening"
+
+define bot express greeting
+  "Hello! I'm here to help you with questions about the companys."
+  "Hello! How can I assist you today?"
+  "Hi there! How may I help you?"
+  "Greetings! What can I do for you?"
+
+define user ask about context
+  "what"
+  "who"
+  "when"
+  "where"
+  "why"
+  "how"
+  "tell me about"
+  "can you explain"
+  "describe"
+
+
+define bot provide context response
+  "$context_info"
+
+define bot no information response
+  "I apologize, but I don't have enough information about that in my knowledge base."
+  "I don't have specific information about that topic in my database."
+
+define flow handle greeting
+  user express greeting
+  bot express greeting
+  
+define flow handle knowledge query
+  user ask about context
+  $context_info = execute retrieve_context(query=$user_message)
+  if $context_info == "I don't have enough information to answer that question."
+    bot no information response
+  else
+    bot provide context response
+
+
+# Fallback flow for general queries
+define flow
+  user ...
+  $context_info = execute retrieve_context(query=$user_message)
+  if $context_info == "I don't have enough information to answer that question."
+    bot express greeting
+  else
+    bot provide context response
+

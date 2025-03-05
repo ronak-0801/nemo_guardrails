@@ -1,0 +1,18 @@
+# Define basic inappropriate messages
+define user message inappropriate
+  "abuse"
+  "sensitive"
+  "personal"
+  "private"
+  "confidential"
+  "secret"
+  "top secret"
+
+define bot refuse message
+  "I cannot process that message."
+
+define flow
+  user message inappropriate
+  bot refuse message
+  stop
+

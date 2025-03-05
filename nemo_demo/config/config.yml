@@ -1,0 +1,31 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+    parameters:
+      temperature: 0.7
+      max_tokens: 150
+
+rails:
+  config:
+    flows:
+      - rails/rails.co
+    actions:
+      - actions.py
+
+# Vector store configuration
+vector_store:
+  type: chromadb
+  collection: simple_rag_demo
+  embedding_model: all-MiniLM-L6-v2
+  similarity_threshold: 0.5
+
+# RAG configuration
+rag:
+  retrieval:
+    top_k: 2
+    similarity_threshold: 0.5
+  generation:
+    temperature: 0.7
+    max_tokens: 150
+

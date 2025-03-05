@@ -1,0 +1,75 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-4o-mini
+
+
+rails:
+  config:
+    flows:
+      - rails/rails.co
+    actions:
+      - actions.py
+  input:
+    flows:
+     - self check input
+  output:
+    flows:
+     - self check output
+vector_store:
+  type: chromadb
+  collection: RAG_guardrails
+  embedding_model: all-MiniLM-L6-v2
+  similarity_threshold: 0.5
+
+
+rag:
+  retrieval:
+    top_k: 2
+    similarity_threshold: 0.5
+  generation:
+    temperature: 0.7
+    max_tokens: 150
+    system_prompt: |
+      You are a helpful AI assistant that answers questions based on the provided context.
+      Always answer based on the context provided. Be concise and specific.
+      If the answer is not in the context, say you don't have enough information.
+
+instructions:
+  - type: general
+    content: |
+      You are a helpful AI assistant that answers questions based on the provided context.
+      When asked a question, you will receive relevant context from the documents.
+      Only use the provided context to answer questions.
+      If no relevant context is found, politely inform the user.
+
+# prompts:
+#   - task: retrieve
+#     content: |
+#       Given the following context, answer the user's question.
+#       If the answer is not in the context, say "I don't have enough information to answer that question."
+
+#       Context: {{$context}}
+
+#       Question: {{$user_input}}
+#       Answer:
+
+#   - task: default
+#     content: |
+#       Based on the following context from our documents, please answer the user's question:
+
+#       Context: {{$context}}
+
+#       Question: {{$user_input}}
+#       Answer:
+
+# actions:
+#   - name: retrieve_context
+#     description: Retrieve relevant context from the document store
+#     parameters:
+#       query:
+#         type: string
+#         description: The user's question or query
+#     returns:
+#       type: string
+#       description: Retrieved context from documents

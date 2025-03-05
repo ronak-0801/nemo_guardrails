@@ -1,0 +1,12 @@
+# Define basic inappropriate topics
+define user ask inappropriate
+  "bad topic 1"
+  "bad topic 2"
+
+define bot refuse topic
+  "I cannot discuss that topic."
+
+define flow
+  user ask inappropriate
+  bot refuse topic
+  stop
