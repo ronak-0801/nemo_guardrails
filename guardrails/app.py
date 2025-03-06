@@ -1,101 +1,214 @@
 import streamlit as st
-import os
 from chatbot import RAGChatbot
+import os
+import asyncio
+from functools import wraps
 
-def initialize_chatbot():
-    """Initialize the chatbot and store it in session state"""
-    if 'chatbot' not in st.session_state:
-        st.session_state.chatbot = RAGChatbot()
+# Add debug prints at the start
+print("Starting application...")
+print("Current working directory:", os.getcwd())
+print("Files in current directory:", os.listdir())
 
-def initialize_chat_history():
-    """Initialize chat history in session state"""
-    if 'messages' not in st.session_state:
-        st.session_state.messages = []
+# Configure Streamlit page
+st.set_page_config(
+    page_title="RAG Chatbot",
+    page_icon="��",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Add initial debug message to Streamlit
+st.write("Debug: Application starting...")
+
+# Helper function to run async functions in Streamlit
+def async_to_sync(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return asyncio.run(func(*args, **kwargs))
+    return wrapper
+
+CHROMA_DB_PATH = "chroma_db"  # Directory to store the ChromaDB files
+
+def initialize_session_state():
+    """Initialize session state variables"""
+    try:
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+        if "chatbot" not in st.session_state:
+            with st.spinner("Initializing chatbot..."):
+                # Create the ChromaDB directory if it doesn't exist
+                if not os.path.exists(CHROMA_DB_PATH):
+                    os.makedirs(CHROMA_DB_PATH)
+                # Initialize chatbot with persistent storage path
+                st.session_state.chatbot = RAGChatbot(persist_directory=CHROMA_DB_PATH)
+        if "processing" not in st.session_state:
+            st.session_state.processing = False
+        if "documents_processed" not in st.session_state:
+            st.session_state.documents_processed = False
+    except Exception as e:
+        st.error(f"Error initializing chatbot: {str(e)}")
+        raise
 
 def display_chat_history():
-    """Display all messages in the chat history"""
+    """Display chat history with improved styling"""
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
+        with st.chat_message(message["role"], avatar="🧑" if message["role"] == "user" else "🤖"):
             st.markdown(message["content"])
 
-def handle_user_input():
-    """Handle user input and generate chatbot response"""
-    if prompt := st.chat_input("What would you like to know?"):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+def handle_file_upload():
+    """Handle PDF file upload with improved UI"""
+    with st.container():
+        uploaded_files = st.file_uploader(
+            "📄 Upload PDF Documents",
+            type=['pdf'],
+            accept_multiple_files=True,
+            key="file_uploader",
+            help="Upload one or more PDF documents to chat about"
+        )
         
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        if uploaded_files:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.info(f"📎 {len(uploaded_files)} file(s) selected")
+            with col2:
+                process_button = st.button("Process Files", type="primary", use_container_width=True)
+                
+            if process_button and not st.session_state.processing:
+                st.session_state.processing = True
+                
+                with st.spinner("📚 Processing documents..."):
+                    try:
+                        # Create docs directory if it doesn't exist
+                        if not os.path.exists("docs"):
+                            os.makedirs("docs")
+                        
+                        # Save uploaded files
+                        for uploaded_file in uploaded_files:
+                            file_path = os.path.join("docs", uploaded_file.name)
+                            with open(file_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
+                        
+                        # Process and add documents
+                        documents = st.session_state.chatbot.process_pdf_to_documents()
+                        if documents:
+                            st.session_state.chatbot.add_documents(documents)
+                            st.session_state.documents_processed = True
+                            st.success(f"✅ Successfully processed {len(documents)} document chunks!")
+                        else:
+                            st.warning("⚠️ No documents were processed. Please check the uploaded files.")
+                    
+                    except Exception as e:
+                        st.error(f"❌ Error processing documents: {str(e)}")
+                    
+                    finally:
+                        st.session_state.processing = False
 
-        # Generate and display assistant response
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response = st.session_state.chatbot.chat(prompt)
-                st.markdown(response)
-        
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
+@async_to_sync
+async def process_user_input(user_input: str):
+    """Process user input and generate response"""
+    if user_input:
+        try:
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    try:
+                        # Register actions for each conversation
+                        st.session_state.chatbot.app.register_action(
+                            action=st.session_state.chatbot.retrieve_context,
+                            name="retrieve_context",
+                        )
+                        
+                        st.session_state.chatbot.app.register_action(
+                            action=st.session_state.chatbot.chat,
+                            name="chat",
+                        )
+                        
+                        # Generate response using the chatbot
+                        response = await st.session_state.chatbot.app.generate_async(prompt=user_input)
+                        
+                        # Add assistant response to chat history
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        st.markdown(response)
+                        
+                    except Exception as e:
+                        error_message = f"Error generating response: {str(e)}"
+                        st.error(error_message)
+                        st.session_state.messages.append({"role": "assistant", "content": error_message})
+        except Exception as e:
+            st.error(f"Error processing input: {str(e)}")
 
 def main():
-    st.set_page_config(
-        page_title="TechCorp AI Assistant",
-        page_icon="🤖",
-        layout="wide"
-    )
+    # Custom CSS for better styling
+    st.markdown("""
+        <style>
+        .stButton button {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .stSpinner > div > div {
+            border-top-color: #4CAF50 !important;
+        }
+        .stAlert {
+            padding: 10px;
+            border-radius: 5px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Initialize session states
-    initialize_chatbot()
-    initialize_chat_history()
-
-    # Sidebar
-    with st.sidebar:
-        st.title("📚 Document Status")
+    # Main title with emoji and styling
+    st.markdown("# 🤖 RAG Chatbot Assistant")
+    st.markdown("---")
+    
+    try:
+        # Initialize session state
+        initialize_session_state()
         
-        # Show PDF directory status
-        pdf_dir = st.session_state.chatbot.pdf_directory
-        if os.path.exists(pdf_dir):
-            pdfs = [f for f in os.listdir(pdf_dir) if f.endswith('.pdf')]
-            st.success(f"📁 PDF Directory: {pdf_dir}")
-            if pdfs:
-                st.write("📑 Loaded Documents:")
-                for pdf in pdfs:
-                    st.write(f"- {pdf}")
-            else:
-                st.warning("No PDF documents found")
+        # Sidebar with improved layout
+        with st.sidebar:
+            st.markdown("### 📚 Document Management")
+            handle_file_upload()
+            
+            st.markdown("---")
+            
+            # Control buttons
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Clear Chat", use_container_width=True):
+                    st.session_state.messages = []
+                    st.rerun()
+            with col2:
+                if st.button("New Session", use_container_width=True):
+                    st.session_state.clear()
+                    st.rerun()
+            
+            st.markdown("---")
+            st.markdown("""
+            ### 📖 How to use:
+            1. 📤 Upload PDF documents
+            2. 🔄 Click 'Process Files'
+            3. 💬 Start chatting in the main area
+            4. 🔍 Get AI-powered responses
+            
+            ### 🛠️ Controls:
+            - **Clear Chat**: Removes chat history
+            - **New Session**: Starts fresh session
+            """)
+        
+        # Main chat interface
+        if not st.session_state.documents_processed:
+            st.info("👋 Welcome! Please upload and process some documents to start chatting.")
         else:
-            st.error(f"PDF directory not found: {pdf_dir}")
-
-        # Add file uploader
-        uploaded_file = st.file_uploader("Upload new PDF document", type="pdf")
-        if uploaded_file is not None:
-            # Create docs directory if it doesn't exist
-            os.makedirs(pdf_dir, exist_ok=True)
+            # Chat interface
+            display_chat_history()
             
-            # Save uploaded file
-            file_path = os.path.join(pdf_dir, uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            st.success(f"File uploaded: {uploaded_file.name}")
-            
-            # Reload PDFs
-            st.session_state.chatbot.load_pdfs()
-            st.rerun()
-
-        # Add refresh button
-        if st.button("🔄 Refresh Documents"):
-            st.session_state.chatbot.load_pdfs()
-            st.rerun()
-
-    # Main chat interface
-    st.title("🤖 TechCorp AI Assistant")
-    st.write("Ask me anything about TechCorp!")
-
-    # Display chat history
-    display_chat_history()
-
-    # Handle user input
-    handle_user_input()
+            # Chat input with placeholder
+            if user_input := st.chat_input("Ask me anything about the documents..."):
+                process_user_input(user_input)
+    
+    except Exception as e:
+        st.error(f"❌ Critical error in main application: {str(e)}")
 
 if __name__ == "__main__":
     main() 

@@ -9,7 +9,9 @@ import nest_asyncio
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 import asyncio
+import torch
 
+torch.classes.__path__ = []
 # Apply nest_asyncio to handle async operations
 nest_asyncio.apply()
 
@@ -22,10 +24,10 @@ if not client.api_key:
     raise ValueError("OPENAI_API_KEY not found in environment variables")
 
 class RAGChatbot:
-    def __init__(self, pdf_directory="docs"):
-        # Initialize ChromaDB
+    def __init__(self, pdf_directory="docs", persist_directory="chroma_db"):
+        # Initialize ChromaDB with persistence
         try:
-            self.chroma_client = chromadb.Client()
+            self.chroma_client = chromadb.PersistentClient(path=persist_directory)
             self.collection = self.chroma_client.get_or_create_collection(
                 name="RAG_guardrails",
                 metadata={"hnsw:space": "cosine"}
