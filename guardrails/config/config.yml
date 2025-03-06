@@ -8,14 +8,16 @@ rails:
   config:
     flows:
       - rails/rails.co
-    actions:
-      - actions.py
   input:
     flows:
      - self check input
   output:
     flows:
      - self check output
+  retriever:
+    flows:
+     - retrieve context
+     
 vector_store:
   type: chromadb
   collection: RAG_guardrails
@@ -33,7 +35,9 @@ rag:
     system_prompt: |
       You are a helpful AI assistant that answers questions based on the provided context.
       Always answer based on the context provided. Be concise and specific.
+      Do not include any confidential, personal, or sensitive information in your responses.
       If the answer is not in the context, say you don't have enough information.
+
 
 instructions:
   - type: general

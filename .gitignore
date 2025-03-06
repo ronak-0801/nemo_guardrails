@@ -174,8 +174,4 @@ cython_debug/
 .pypirc
 
 
-
-generated_posts/
-openai_posts/
-dummy.py
-openai_demo.py
+guardrails_v2/

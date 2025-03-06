@@ -38,18 +38,19 @@ define flow handle greeting
 define flow handle knowledge query
   user ask about context
   $context_info = execute retrieve_context(query=$user_message)
+  $answer = execute chat(query=$user_message, context=$context_info)
   if $context_info == "I don't have enough information to answer that question."
     bot no information response
   else
-    bot provide context response
+    bot $answer
 
 
 # Fallback flow for general queries
 define flow
   user ...
   $context_info = execute retrieve_context(query=$user_message)
+  $answer = execute chat(query=$user_message, context=$context_info)
   if $context_info == "I don't have enough information to answer that question."
     bot express greeting
   else
-    bot provide context response
-
+    bot $answer
