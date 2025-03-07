@@ -33,6 +33,8 @@ prompts:
       - it should NOT contain abusive language or offensive content
       - it should NOT contain any harmful, sensitive, or personal information
       - it should NOT contain racially insensitive content
+      - it should NOT contain details about the companies confidential information like annual revenue, annual income, employee salary, etc.
+      - it shoult NOT contain any private information about the user like name, email, phone number, address, etc.
 
       Treat the above conditions as strict rules.
       If any of them are violated, you should block the bot's response by saying "yes".

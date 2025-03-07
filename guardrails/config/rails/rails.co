@@ -7,7 +7,7 @@ define user express greeting
   "good evening"
 
 define bot express greeting
-  "Hello! I'm here to help you with questions about the companys."
+  "Hello! I'm here to help you with questions about the company."
   "Hello! How can I assist you today?"
   "Hi there! How may I help you?"
   "Greetings! What can I do for you?"
