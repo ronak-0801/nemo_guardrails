@@ -60,6 +60,20 @@ git clone https://github.com/ronak-0801/nemo_guardrails.git
 pip install -r requirements.txt
 ```
 
+3. Set up environment variables:
+   - Copy `.env.example` to `.env`
+   - Fill in your API keys and configuration values
+```bash
+cp .env.example .env
+```
+
+## Environment Variables
+
+The following environment variables need to be set in your `.env` file:
+
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `GEMINI_API_KEY`: Your Google Gemini API key
+
 ## Usage
 
 ### Running the Basic Chatbot
